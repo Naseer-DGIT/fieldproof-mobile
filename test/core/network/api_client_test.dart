@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:fieldproof_mobile/core/config/env.dart';
 import 'package:fieldproof_mobile/core/logging/secure_logger.dart';
 import 'package:fieldproof_mobile/core/network/api_client.dart';
@@ -33,6 +35,8 @@ class _CaptureAdapter implements HttpClientAdapter {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUpAll(() {
     Env.current = Environment.dev;
     Env.apiBaseUrl = 'http://localhost:9999/api/v1';
@@ -42,8 +46,43 @@ void main() {
   });
 
   setUp(() {
+    // Mock flutter_secure_storage so KeyStore reads do not throw.
+    // Default: no token stored. Individual tests override as needed.
+    TestDefaultBinaryMessengerBinding
+        .instance
+        .defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async {
+        switch (call.method) {
+          case 'read':
+            return null;
+          case 'write':
+          case 'delete':
+          case 'deleteAll':
+            return null;
+          case 'readAll':
+            return <String, String>{};
+          case 'containsKey':
+            return false;
+          default:
+            return null;
+        }
+      },
+    );
+
     ApiClient.debugReset();
     ApiClient.init();
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding
+        .instance
+        .defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      null,
+    );
   });
 
   test('request carries X-Request-ID', () async {
@@ -52,20 +91,47 @@ void main() {
 
     await ApiClient.instance.get('/anything');
 
-    expect(adapter.captured.length, 1);
+    expect(adapter.captured, hasLength(1));
     final headers = adapter.captured.first.headers;
     expect(headers.containsKey('X-Request-ID'), isTrue);
     expect(headers['X-Request-ID'], isNotEmpty);
   });
 
-  test('Authorization is added when a session token exists', () async {
+  test('no Authorization header when no token is stored', () async {
     final adapter = _CaptureAdapter();
     ApiClient.instance.httpClientAdapter = adapter;
 
     await ApiClient.instance.get('/anything');
 
-    // No token saved in this test — header must be absent.
-    expect(adapter.captured.first.headers.containsKey('Authorization'), isFalse);
+    expect(adapter.captured, hasLength(1));
+    expect(
+      adapter.captured.first.headers.containsKey('Authorization'),
+      isFalse,
+    );
+  });
+
+  test('Authorization header is added when a token is stored', () async {
+    TestDefaultBinaryMessengerBinding
+        .instance
+        .defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async {
+        if (call.method == 'read') return 'test-token-abc';
+        return null;
+      },
+    );
+
+    final adapter = _CaptureAdapter();
+    ApiClient.instance.httpClientAdapter = adapter;
+
+    await ApiClient.instance.get('/anything');
+
+    expect(adapter.captured, hasLength(1));
+    expect(
+      adapter.captured.first.headers['Authorization'],
+      'Bearer test-token-abc',
+    );
   });
 
   test('init is idempotent — calling twice does not throw', () {
