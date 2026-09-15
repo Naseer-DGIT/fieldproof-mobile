@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'core/config/env.dart';
+import 'core/logging/secure_logger.dart';
 
 class FieldProofApp extends StatelessWidget {
   const FieldProofApp({super.key});
@@ -34,6 +36,7 @@ class _BootScreen extends StatelessWidget {
             Text('log level:   ${Env.logLevel}'),
             Text('pinning:     ${Env.certificatePinning}'),
             Text('api base:    ${Env.apiBaseUrl}', textAlign: TextAlign.center),
+            const SizedBox(height: 24),
           ],
         ),
       ),
