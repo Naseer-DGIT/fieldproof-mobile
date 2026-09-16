@@ -50,3 +50,13 @@ app.*.map.json
 .env.prod
 *.keystore
 *.jks
+
+# Build artifacts
+/android/build/
+/ios/Pods/
+ios/.symlinks/
+
+# Build artifacts
+/android/build/
+/ios/Pods/
+ios/.symlinks/
