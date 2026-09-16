@@ -1,30 +1,35 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fieldproof_mobile/main.dart';
+import 'package:fieldproof_mobile/app.dart';
+import 'package:fieldproof_mobile/core/config/env.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  setUpAll(() {
+    Env.current = Environment.dev;
+    Env.apiBaseUrl = 'http://localhost:9999/api/v1';
+    Env.logLevel = 'error';
+    Env.certificatePinning = false;
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('FieldProofApp renders the shell with Attendance tab active',
+      (tester) async {
+    await tester.pumpWidget(const FieldProofApp());
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    expect(find.text('Attendance — S2 will fill this'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('tapping History tab switches the visible screen',
+      (tester) async {
+    await tester.pumpWidget(const FieldProofApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('History'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('History — S7 will fill this'), findsOneWidget);
+    expect(find.text('Attendance — S2 will fill this'), findsNothing);
   });
 }
