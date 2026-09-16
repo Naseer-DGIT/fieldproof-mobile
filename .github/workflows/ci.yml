@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop, 'sprint/**']
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: analyze · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Create dummy .env files
+        run: |
+          for flavor in dev staging prod; do
+            cat > ".env.${flavor}" <<ENV
+          ENVIRONMENT=${flavor}
+          API_BASE_URL=https://ci.invalid/api/v1
+          LOG_LEVEL=error
+          CERTIFICATE_PINNING=false
+          ENV
+          done
+          ls -la .env.*
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test --reporter expanded
+
+      - name: Build release APK (staging flavor)
+        run: flutter build apk --release --dart-define=FLAVOR=staging
+
+  secrets:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
