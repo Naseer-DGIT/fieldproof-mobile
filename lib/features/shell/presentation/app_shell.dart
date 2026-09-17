@@ -6,7 +6,7 @@ import '../../auth/presentation/bloc/auth_event.dart';
 import 'bloc/app_shell_bloc.dart';
 import 'bloc/app_shell_event.dart';
 import 'bloc/app_shell_state.dart';
-import 'screens/attendance_screen.dart';
+import '../../attendance/presentation/screens/attendance_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/security_screen.dart';

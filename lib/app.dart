@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/config/env.dart';
+import 'features/attendance/data/attendance_queue.dart';
+import 'features/attendance/data/attendance_repository.dart';
+import 'features/attendance/presentation/bloc/attendance_bloc.dart';
+import 'features/attendance/presentation/bloc/attendance_event.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
@@ -27,6 +31,9 @@ class FieldProofApp extends StatelessWidget {
         ),
         RepositoryProvider<DeviceRepository>(
           create: (_) => const DeviceRepository(),
+        ),
+        RepositoryProvider<AttendanceRepository>(
+          create: (_) => const AttendanceRepository(AttendanceQueue()),
         ),
       ],
       child: MultiBlocProvider(
@@ -87,7 +94,12 @@ class _DeviceGate extends StatelessWidget {
     return BlocBuilder<DeviceBloc, DeviceState>(
       builder: (context, state) {
         if (state is DeviceRegistered) {
-          return const AppShell();
+          return BlocProvider<AttendanceBloc>(
+            create: (ctx) =>
+                AttendanceBloc(ctx.read<AttendanceRepository>())
+                  ..add(const AttendanceStatusRequested()),
+            child: const AppShell(),
+          );
         }
         if (state is DeviceUnknown) {
           return const Scaffold(
