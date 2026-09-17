@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/config/env.dart';
+import 'core/lifecycle/sync_on_resume.dart';
 import 'features/attendance/data/attendance_queue.dart';
 import 'features/attendance/data/attendance_repository.dart';
 import 'features/attendance/presentation/bloc/attendance_bloc.dart';
@@ -46,14 +47,16 @@ class FieldProofApp extends StatelessWidget {
             create: (_) => AppShellBloc(),
           ),
         ],
-        child: MaterialApp(
-          title: 'FieldProof',
-          debugShowCheckedModeBanner: !Env.isProd,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-            useMaterial3: true,
+        child: SyncOnResume(
+          child: MaterialApp(
+            title: 'FieldProof',
+            debugShowCheckedModeBanner: !Env.isProd,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+              useMaterial3: true,
+            ),
+            home: const _AuthGate(),
           ),
-          home: const _AuthGate(),
         ),
       ),
     );
