@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/env.dart';
 import '../errors/api_failure.dart';
+import 'auth_signals.dart';
 import '../logging/secure_logger.dart';
 import '../security/key_store.dart';
 
@@ -104,6 +105,7 @@ class _AuthInterceptor extends Interceptor {
     if (err.response?.statusCode == 401) {
       await KeyStore.clearSession();
       SecureLogger.w('api.auth.session_cleared');
+      AuthSignals.sessionExpired();
     }
     handler.next(err);
   }

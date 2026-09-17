@@ -24,3 +24,8 @@ class AuthLoginRequested extends AuthEvent {
 class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }
+
+/// Emitted by the AuthBloc itself when the network layer reports a 401.
+class AuthSessionExpired extends AuthEvent {
+  const AuthSessionExpired();
+}

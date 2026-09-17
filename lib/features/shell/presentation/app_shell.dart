@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../auth/presentation/bloc/auth_bloc.dart';
+import '../../auth/presentation/bloc/auth_event.dart';
 import 'bloc/app_shell_bloc.dart';
 import 'bloc/app_shell_event.dart';
 import 'bloc/app_shell_state.dart';
@@ -9,9 +11,6 @@ import 'screens/history_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/security_screen.dart';
 
-/// FieldProof shell. Owns bottom navigation and swaps the visible
-/// screen based on [AppShellBloc] state. The widget itself contains
-/// no logic — it dispatches events and renders states (ADR-0001).
 class AppShell extends StatelessWidget {
   const AppShell({super.key});
 
@@ -27,6 +26,18 @@ class AppShell extends StatelessWidget {
     return BlocBuilder<AppShellBloc, AppShellState>(
       builder: (context, state) {
         return Scaffold(
+          appBar: AppBar(
+            title: const Text('FieldProof'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout),
+                tooltip: 'Sign out',
+                onPressed: () => context
+                    .read<AuthBloc>()
+                    .add(const AuthLogoutRequested()),
+              ),
+            ],
+          ),
           body: SafeArea(
             child: IndexedStack(
               index: state.selectedIndex,

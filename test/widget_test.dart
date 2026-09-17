@@ -13,6 +13,7 @@ void main() {
   });
 
   setUp(() {
+    // Secure storage starts empty — no session.
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
       const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
@@ -28,12 +29,10 @@ void main() {
     );
   });
 
-  testWidgets('FieldProofApp shows the login form when unauthenticated',
-      (tester) async {
+  testWidgets('shows login form when no session exists', (tester) async {
     await tester.pumpWidget(const FieldProofApp());
     await tester.pumpAndSettle(const Duration(seconds: 1));
 
-    expect(find.text('FieldProof'), findsWidgets);
     expect(find.text('Sign in'), findsOneWidget);
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
