@@ -7,6 +7,11 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
+import 'features/device/data/device_repository.dart';
+import 'features/device/presentation/bloc/device_bloc.dart';
+import 'features/device/presentation/bloc/device_event.dart';
+import 'features/device/presentation/bloc/device_state.dart';
+import 'features/device/presentation/screens/device_setup_screen.dart';
 import 'features/shell/presentation/app_shell.dart';
 import 'features/shell/presentation/bloc/app_shell_bloc.dart';
 
@@ -15,8 +20,15 @@ class FieldProofApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepositoryProvider<AuthRepository>(
-      create: (_) => const AuthRepository(),
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<AuthRepository>(
+          create: (_) => const AuthRepository(),
+        ),
+        RepositoryProvider<DeviceRepository>(
+          create: (_) => const DeviceRepository(),
+        ),
+      ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider<AuthBloc>(
@@ -46,26 +58,44 @@ class _AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listenWhen: (prev, next) =>
-          next is AuthUnauthenticated && prev is AuthAuthenticated,
-      listener: (context, state) {
-        // Logout from anywhere in the app returns to login.
-        // No named routes yet — the shell is rebuilt from scratch.
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state is AuthAuthenticated) {
+          return BlocProvider<DeviceBloc>(
+            create: (ctx) =>
+                DeviceBloc(ctx.read<DeviceRepository>())
+                  ..add(const DeviceStatusRequested()),
+            child: const _DeviceGate(),
+          );
+        }
+        if (state is AuthUnknown) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return const LoginScreen();
       },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          if (state is AuthAuthenticated) {
-            return const AppShell();
-          }
-          if (state is AuthUnknown) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          return const LoginScreen();
-        },
-      ),
+    );
+  }
+}
+
+class _DeviceGate extends StatelessWidget {
+  const _DeviceGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<DeviceBloc, DeviceState>(
+      builder: (context, state) {
+        if (state is DeviceRegistered) {
+          return const AppShell();
+        }
+        if (state is DeviceUnknown) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return const DeviceSetupScreen();
+      },
     );
   }
 }
