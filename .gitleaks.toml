@@ -1,0 +1,14 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known false positives in FieldProof mobile"
+paths = [
+  '''test/.*''',
+  '''scripts/.*''',
+]
+regexes = [
+  '''hunter2''',
+  '''fake-token''',
+  '''ci\.invalid''',
+]
