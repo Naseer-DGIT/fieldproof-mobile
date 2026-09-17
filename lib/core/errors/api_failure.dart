@@ -30,6 +30,15 @@ class NotFoundFailure extends ApiFailure {
   const NotFoundFailure() : super('Resource not found.', statusCode: 404);
 }
 
+/// 409. Used when the server rejects a request because the client state
+/// has diverged — e.g. an attendance event whose previous_hash does not
+/// match the server's chain head.
+class ConflictFailure extends ApiFailure {
+  final String? detail;
+  const ConflictFailure({this.detail})
+      : super(detail ?? 'Conflict with server state.', statusCode: 409);
+}
+
 class ValidationFailure extends ApiFailure {
   final Map<String, dynamic>? fieldErrors;
 

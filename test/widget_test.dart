@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fieldproof_mobile/app.dart';
@@ -12,24 +12,29 @@ void main() {
     Env.certificatePinning = false;
   });
 
-  testWidgets('FieldProofApp renders the shell with Attendance tab active',
-      (tester) async {
-    await tester.pumpWidget(const FieldProofApp());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Attendance — S2 will fill this'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+  setUp(() {
+    // Secure storage starts empty — no session.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async => null,
+    );
   });
 
-  testWidgets('tapping History tab switches the visible screen',
-      (tester) async {
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      null,
+    );
+  });
+
+  testWidgets('shows login form when no session exists', (tester) async {
     await tester.pumpWidget(const FieldProofApp());
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(seconds: 1));
 
-    await tester.tap(find.text('History'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('History — S7 will fill this'), findsOneWidget);
-    expect(find.text('Attendance — S2 will fill this'), findsNothing);
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
   });
 }
