@@ -15,16 +15,15 @@ is met by the code as written.
 ## Summary
 
 - Files reviewed: 10
-- Findings: ___
+- Findings: 0
 - Accepted limitations: 3
 
 ---
 
 ## Findings
 
-| # | File | Severity | Finding | Action |
-|---|------|----------|---------|--------|
-| 1 | ___ | ___ | ___ | ___ |
+No findings. All verification paths exercised end-to-end by
+`fieldproof-backend/scripts/test_attendance_events.py` (ALL PASS).
 
 ---
 
@@ -53,80 +52,80 @@ is met by the code as written.
 
 ### lib/features/attendance/domain/attendance_event.dart
 
-- Timestamp is UTC: ___
-- Canonical JSON deterministic (sorted keys, no whitespace): ___
-- Payload includes event_id and type for server cross-check: ___
-- previous_hash omitted when null: ___
-- Verdict: ___
+- Timestamp is UTC: yes (`DateTime.now().toUtc()`)
+- Canonical JSON deterministic (sorted keys, no whitespace): yes
+- Payload includes event_id and type for server cross-check: yes
+- previous_hash omitted when null: yes
+- Verdict: PASS
 
 ### lib/features/attendance/data/attendance_queue.dart
 
-- Single storage path through AppDatabase (SQLCipher): ___
-- SyncStatus enum explicit (four values): ___
-- `clearAll` reachable from production code: ___
-- `retry_count` update uses parameterized SQL: ___
-- Verdict: ___
+- Single storage path through AppDatabase (SQLCipher): yes
+- SyncStatus enum explicit (four values): yes
+- `clearAll` reachable from production code: no
+- `retry_count` update uses parameterized SQL: yes
+- Verdict: PASS
 
 ### lib/features/attendance/data/attendance_repository.dart
 
-- Signing owned by repository: ___
-- Idempotency key generated per event: ___
-- Throws clearly if device key missing: ___
-- Verdict: ___
+- Signing owned by repository: yes
+- Idempotency key generated per event: yes
+- Throws clearly if device key missing: yes (`StateError`)
+- Verdict: PASS
 
 ### lib/features/attendance/data/sync_worker.dart
 
-- Stops on first retryable failure: ___
-- Stops on first conflict: ___
-- Rejected rows marked and skipped: ___
-- Logs contain no payload or signature: ___
-- Verdict: ___
+- Stops on first retryable failure: yes
+- Stops on first conflict: yes
+- Rejected rows marked and skipped: yes
+- Logs contain no payload or signature: yes
+- Verdict: PASS
 
 ### lib/core/security/device_key.dart
 
-- Private key stored in KeyStore: ___
-- Private key never logged: ___
-- Key reused across calls (not regenerated): ___
-- No export path: ___
-- Verdict: ___ (with accepted limitation 1)
+- Private key stored in KeyStore: yes
+- Private key never logged: yes
+- Key reused across calls (not regenerated): yes
+- No export path: yes
+- Verdict: PASS (with accepted limitation 1)
 
 ### lib/features/attendance/presentation/bloc/attendance_bloc.dart
 
-- Retry timer cancelled on close: ___
-- Concurrent sync prevented: ___
-- No sensitive fields in logs: ___
-- Verdict: ___
+- Retry timer cancelled on close: yes
+- Concurrent sync prevented: yes (timer cancelled before emit)
+- No sensitive fields in logs: yes
+- Verdict: PASS
 
 ### lib/core/lifecycle/sync_on_resume.dart
 
-- Observer removed on dispose: ___
-- Safe when AttendanceBloc is absent: ___
-- Fires only on `resumed`: ___
-- Verdict: ___
+- Observer removed on dispose: yes
+- Safe when AttendanceBloc is absent: yes (`try/catch`)
+- Fires only on `resumed`: yes
+- Verdict: PASS
 
 ### fieldproof-backend/app/api/attendance.py
 
-- Device resolved before signature check: ___
-- Signature verified over the raw signed bytes: ___
-- Body fields cross-checked against payload: ___
-- Chain scope: ___
-- Chain compares `event_id`, not `id`: ___
-- Error responses contain no internals: ___
-- Verdict: ___ (with accepted limitation 2)
+- Device resolved before signature check: yes
+- Signature verified over the raw signed bytes: yes
+- Body fields cross-checked against payload: yes
+- Chain scope: device
+- Chain compares `event_id`, not `id`: yes
+- Error responses contain no internals: yes
+- Verdict: PASS (with accepted limitation 2)
 
 ### fieldproof-backend/app/services/signatures.py
 
-- Handles padded and unpadded base64: ___
-- Returns False on InvalidSignature and ValueError: ___
-- Verdict: ___
+- Handles padded and unpadded base64: yes
+- Returns False on InvalidSignature and ValueError: yes
+- Verdict: PASS
 
 ### fieldproof-backend/app/api/devices.py
 
-- Idempotent for same public key: ___
-- Previous devices revoked, not deleted: ___
-- One active device per user: ___
-- `platform` validated by Pydantic pattern: ___
-- Verdict: ___
+- Idempotent for same public key: yes
+- Previous devices revoked, not deleted: yes
+- One active device per user: yes
+- `platform` validated by Pydantic pattern: yes
+- Verdict: PASS
 
 ---
 
@@ -134,14 +133,17 @@ is met by the code as written.
 
 | Command | Result |
 |---------|--------|
-| `grep SecureLogger` for payload/signature/seed | ___ |
-| `grep PRIVATE KEY` in lib/ | ___ |
-| `grep clearAll` outside queue file | ___ |
-| `.env.*` tracked in git | ___ |
-| `Test1234` in tracked backend files | ___ |
+| `grep SecureLogger` for payload/signature/seed | clean |
+| `grep PRIVATE KEY` in lib/ | clean |
+| `grep clearAll` outside queue file | clean |
+| `.env.*` tracked in git | clean |
+| `Test1234` in tracked backend files | clean |
 
 ---
 
 ## Conclusion
 
-___
+S2 delivers signed, queued, idempotent, chain-verified attendance
+events. All verification paths are exercised end-to-end by
+`scripts/test_attendance_events.py` (ALL PASS). Three accepted
+limitations are documented. No blocking findings.
