@@ -1,7 +1,18 @@
-import 'dart:convert';
-
 import '../../../core/storage/database.dart';
 import '../domain/attendance_event.dart';
+
+enum SyncStatus {
+  pending('pending'),
+  synced('synced'),
+  rejected('rejected'),
+  conflict('conflict');
+
+  final String wire;
+  const SyncStatus(this.wire);
+
+  static SyncStatus fromWire(String value) =>
+      SyncStatus.values.firstWhere((s) => s.wire == value);
+}
 
 class QueuedEvent {
   final int rowId;
@@ -12,7 +23,8 @@ class QueuedEvent {
   final String? previousHash;
   final String idempotencyKey;
   final int createdAt;
-  final String syncStatus;
+  final SyncStatus syncStatus;
+  final int retryCount;
 
   const QueuedEvent({
     required this.rowId,
@@ -24,6 +36,7 @@ class QueuedEvent {
     required this.idempotencyKey,
     required this.createdAt,
     required this.syncStatus,
+    required this.retryCount,
   });
 
   factory QueuedEvent.fromRow(Map<String, dynamic> row) => QueuedEvent(
@@ -35,7 +48,8 @@ class QueuedEvent {
         previousHash: row['previous_hash'] as String?,
         idempotencyKey: row['idempotency_key'] as String,
         createdAt: row['created_at'] as int,
-        syncStatus: row['sync_status'] as String,
+        syncStatus: SyncStatus.fromWire(row['sync_status'] as String),
+        retryCount: (row['retry_count'] as int?) ?? 0,
       );
 }
 
@@ -57,7 +71,7 @@ class AttendanceQueue {
       'previous_hash': event.previousHash,
       'idempotency_key': idempotencyKey,
       'created_at': DateTime.now().millisecondsSinceEpoch,
-      'sync_status': 'pending',
+      'sync_status': SyncStatus.pending.wire,
     });
   }
 
@@ -65,7 +79,19 @@ class AttendanceQueue {
     final db = await AppDatabase.instance;
     final rows = await db.query(
       'attendance_queue',
-      where: "sync_status = 'pending'",
+      where: 'sync_status = ?',
+      whereArgs: [SyncStatus.pending.wire],
+      orderBy: 'id ASC',
+    );
+    return rows.map(QueuedEvent.fromRow).toList();
+  }
+
+  Future<List<QueuedEvent>> byStatus(SyncStatus status) async {
+    final db = await AppDatabase.instance;
+    final rows = await db.query(
+      'attendance_queue',
+      where: 'sync_status = ?',
+      whereArgs: [status.wire],
       orderBy: 'id ASC',
     );
     return rows.map(QueuedEvent.fromRow).toList();
@@ -84,8 +110,10 @@ class AttendanceQueue {
 
   Future<int> pendingCount() async {
     final db = await AppDatabase.instance;
-    final result =
-        await db.rawQuery("SELECT COUNT(*) FROM attendance_queue WHERE sync_status = 'pending'");
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) FROM attendance_queue WHERE sync_status = ?',
+      [SyncStatus.pending.wire],
+    );
     return (result.first.values.first as int?) ?? 0;
   }
 
@@ -101,13 +129,46 @@ class AttendanceQueue {
     return rows.first['event_id'] as String;
   }
 
-  /// Test and debug helper — clears the queue. Never call from production.
+  Future<void> markSynced(int rowId) async {
+    final db = await AppDatabase.instance;
+    await db.update(
+      'attendance_queue',
+      {'sync_status': SyncStatus.synced.wire},
+      where: 'id = ?',
+      whereArgs: [rowId],
+    );
+  }
+
+  Future<void> markRejected(int rowId) async {
+    final db = await AppDatabase.instance;
+    await db.update(
+      'attendance_queue',
+      {'sync_status': SyncStatus.rejected.wire},
+      where: 'id = ?',
+      whereArgs: [rowId],
+    );
+  }
+
+  Future<void> markConflict(int rowId) async {
+    final db = await AppDatabase.instance;
+    await db.update(
+      'attendance_queue',
+      {'sync_status': SyncStatus.conflict.wire},
+      where: 'id = ?',
+      whereArgs: [rowId],
+    );
+  }
+
+  Future<void> bumpRetry(int rowId) async {
+    final db = await AppDatabase.instance;
+    await db.rawUpdate(
+      'UPDATE attendance_queue SET retry_count = retry_count + 1 WHERE id = ?',
+      [rowId],
+    );
+  }
+
   Future<void> clearAll() async {
     final db = await AppDatabase.instance;
     await db.delete('attendance_queue');
   }
-
-  /// Whether the payload column already contains the given canonical string.
-  /// Useful in tests to assert the signed bytes match the sent bytes.
-  static String decodePayload(String payload) => utf8.decode(base64Url.decode(payload));
 }

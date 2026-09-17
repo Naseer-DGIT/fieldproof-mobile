@@ -95,9 +95,9 @@ class _DeviceGate extends StatelessWidget {
       builder: (context, state) {
         if (state is DeviceRegistered) {
           return BlocProvider<AttendanceBloc>(
-            create: (ctx) =>
-                AttendanceBloc(ctx.read<AttendanceRepository>())
-                  ..add(const AttendanceStatusRequested()),
+            create: (ctx) => AttendanceBloc(
+              ctx.read<AttendanceRepository>(),
+            )..add(const AttendanceStatusRequested()),
             child: const AppShell(),
           );
         }

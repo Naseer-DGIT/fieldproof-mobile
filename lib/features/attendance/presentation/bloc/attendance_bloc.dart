@@ -1,15 +1,20 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/attendance_repository.dart';
+import '../../data/sync_worker.dart';
 import 'attendance_event.dart';
 import 'attendance_state.dart';
 
 class AttendanceBloc extends Bloc<AttendanceBlocEvent, AttendanceState> {
   final AttendanceRepository _repository;
+  final SyncWorker _sync;
 
-  AttendanceBloc(this._repository) : super(const AttendanceUnknown()) {
+  AttendanceBloc(this._repository, {SyncWorker? sync})
+      : _sync = sync ?? SyncWorker(),
+        super(const AttendanceUnknown()) {
     on<AttendanceStatusRequested>(_onStatus);
     on<AttendanceRecordRequested>(_onRecord);
+    on<AttendanceSyncRequested>(_onSync);
   }
 
   Future<void> _onStatus(
@@ -37,13 +42,34 @@ class AttendanceBloc extends Bloc<AttendanceBlocEvent, AttendanceState> {
         lastRecorded: event.type,
       ));
     } catch (e) {
-      // Restore the previous ready state if there was one; otherwise
-      // fall through to Failure so the UI can show a message.
       if (previous is AttendanceReady) {
         emit(previous);
       } else {
         emit(const AttendanceFailure('Could not record event.'));
       }
     }
+  }
+
+  Future<void> _onSync(
+    AttendanceSyncRequested event,
+    Emitter<AttendanceState> emit,
+  ) async {
+    if (state is! AttendanceReady) return;
+    final current = state as AttendanceReady;
+
+    emit(current.copyWith(syncing: true));
+    try {
+      await _sync.drain();
+    } catch (_) {
+      // The worker swallows per-row failures. Reaching here means
+      // something at the queue level broke.
+    }
+    final status = await _repository.currentStatus();
+    final count = await _repository.pendingCount();
+    emit(AttendanceReady(
+      status: status,
+      pendingCount: count,
+      lastRecorded: current.lastRecorded,
+    ));
   }
 }

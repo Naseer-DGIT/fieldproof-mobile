@@ -17,26 +17,30 @@ class AttendanceReady extends AttendanceState {
   final AttendanceStatus status;
   final int pendingCount;
   final AttendanceEventType? lastRecorded;
+  final bool syncing;
 
   const AttendanceReady({
     required this.status,
     required this.pendingCount,
     this.lastRecorded,
+    this.syncing = false,
   });
 
   AttendanceReady copyWith({
     AttendanceStatus? status,
     int? pendingCount,
     AttendanceEventType? lastRecorded,
+    bool? syncing,
   }) =>
       AttendanceReady(
         status: status ?? this.status,
         pendingCount: pendingCount ?? this.pendingCount,
         lastRecorded: lastRecorded ?? this.lastRecorded,
+        syncing: syncing ?? this.syncing,
       );
 
   @override
-  List<Object?> get props => [status, pendingCount, lastRecorded];
+  List<Object?> get props => [status, pendingCount, lastRecorded, syncing];
 }
 
 class AttendanceRecording extends AttendanceState {

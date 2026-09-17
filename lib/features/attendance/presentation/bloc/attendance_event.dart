@@ -20,3 +20,7 @@ class AttendanceRecordRequested extends AttendanceBlocEvent {
   @override
   List<Object?> get props => [type];
 }
+
+class AttendanceSyncRequested extends AttendanceBlocEvent {
+  const AttendanceSyncRequested();
+}

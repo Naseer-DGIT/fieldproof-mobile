@@ -193,6 +193,9 @@ class _ErrorInterceptor extends Interceptor {
         if (code == 401) return const UnauthorizedFailure();
         if (code == 403) return const ForbiddenFailure();
         if (code == 404) return const NotFoundFailure();
+        if (code == 409) {
+          return const ConflictFailure();
+        }
         if (code == 422) return const ValidationFailure();
         if (code >= 500) return ServerFailure(code);
         return const UnknownFailure();

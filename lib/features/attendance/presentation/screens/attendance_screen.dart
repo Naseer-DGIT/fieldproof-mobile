@@ -61,6 +61,24 @@ class _ReadyView extends StatelessWidget {
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
           ),
+          if (state.pendingCount > 0) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: state.syncing
+                  ? null
+                  : () => context
+                      .read<AttendanceBloc>()
+                      .add(const AttendanceSyncRequested()),
+              icon: state.syncing
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cloud_upload_outlined),
+              label: Text(state.syncing ? 'Syncing...' : 'Sync now'),
+            ),
+          ],
           const Spacer(),
           if (state.status == AttendanceStatus.checkedOut)
             FilledButton(
