@@ -2,23 +2,18 @@ import '../../../core/errors/api_failure.dart';
 import '../../../core/logging/secure_logger.dart';
 import '../../../core/network/api_result.dart';
 import 'attendance_queue.dart';
+import 'drain_result.dart';
 
-/// Result of a single sync attempt.
 enum SyncOutcome { accepted, duplicate, rejected, conflict, retry, stopped }
 
-/// Signature of the outbound call. Injectable for tests.
-typedef EventPoster = Future<Map<String, dynamic>> Function(
-  QueuedEvent row,
-);
+typedef EventPoster = Future<Map<String, dynamic>> Function(QueuedEvent row);
 
 /// Drains the pending attendance queue against the server.
 ///
 /// Rules:
-///   - Stop at the first retryable failure. Do not skip rows: events
-///     must reach the server in chain order.
-///   - Stop at the first conflict. A chain mismatch means the local
-///     queue and the server disagree; continuing would only widen the gap.
-///   - Rejected rows are marked and skipped; they will never succeed.
+///   - Stop at the first retryable failure. Do not skip rows.
+///   - Stop at the first conflict. Local and server chain disagree.
+///   - Rejected rows are marked and skipped.
 class SyncWorker {
   final AttendanceQueue _queue;
   final EventPoster _post;
@@ -44,11 +39,12 @@ class SyncWorker {
     );
   }
 
-  /// Runs one full drain pass. Returns the number of rows that ended
-  /// in a terminal state (synced, rejected, or conflict) during this pass.
-  Future<int> drain() async {
+  Future<DrainResult> drain() async {
     final pending = await _queue.pending();
-    var completed = 0;
+    var synced = 0;
+    var rejected = 0;
+    var conflicts = 0;
+    var retries = 0;
 
     for (final row in pending) {
       final outcome = await _send(row);
@@ -56,22 +52,38 @@ class SyncWorker {
         case SyncOutcome.accepted:
         case SyncOutcome.duplicate:
           await _queue.markSynced(row.rowId);
-          completed += 1;
+          synced += 1;
         case SyncOutcome.rejected:
           await _queue.markRejected(row.rowId);
-          completed += 1;
+          rejected += 1;
         case SyncOutcome.conflict:
           await _queue.markConflict(row.rowId);
-          completed += 1;
-          return completed;
+          conflicts += 1;
+          return DrainResult(
+            synced: synced,
+            rejected: rejected,
+            conflicts: conflicts,
+            retries: retries,
+          );
         case SyncOutcome.retry:
           await _queue.bumpRetry(row.rowId);
-          return completed;
+          retries += 1;
+          return DrainResult(
+            synced: synced,
+            rejected: rejected,
+            conflicts: conflicts,
+            retries: retries,
+          );
         case SyncOutcome.stopped:
-          return completed;
+          return DrainResult(
+            synced: synced,
+            rejected: rejected,
+            conflicts: conflicts,
+            retries: retries,
+          );
       }
     }
-    return completed;
+    return DrainResult(synced: synced, rejected: rejected);
   }
 
   Future<SyncOutcome> _send(QueuedEvent row) async {
@@ -87,15 +99,13 @@ class SyncWorker {
     } on ValidationFailure {
       SecureLogger.w('sync.rejected');
       return SyncOutcome.rejected;
-    } on ApiFailure catch (e) {
-      if (e.statusCode == 409) {
-        SecureLogger.w('sync.conflict');
-        return SyncOutcome.conflict;
-      }
-      if (e is ForbiddenFailure || e is NotFoundFailure) {
-        SecureLogger.w('sync.stopped');
-        return SyncOutcome.stopped;
-      }
+    } on ConflictFailure {
+      SecureLogger.w('sync.conflict');
+      return SyncOutcome.conflict;
+    } on ForbiddenFailure {
+      SecureLogger.w('sync.stopped');
+      return SyncOutcome.stopped;
+    } on ApiFailure {
       SecureLogger.w('sync.retry');
       return SyncOutcome.retry;
     }

@@ -138,8 +138,8 @@ void main() {
       },
     );
 
-    final n = await worker.drain();
-    expect(n, 1);
+    final result = await worker.drain();
+    expect(result.completed, 1);
     expect(calls, 1);
     expect(queue.transitions, [SyncStatus.synced]);
     expect((await queue.pending()).length, 0);
@@ -153,8 +153,8 @@ void main() {
       poster: (r) async => throw const ValidationFailure(),
     );
 
-    final n = await worker.drain();
-    expect(n, 1);
+    final result = await worker.drain();
+    expect(result.completed, 1);
     expect(queue.transitions, [SyncStatus.rejected]);
   });
 
@@ -168,8 +168,9 @@ void main() {
       poster: (r) async => throw const ConflictFailure(),
     );
 
-    final n = await worker.drain();
-    expect(n, 1);
+    final result = await worker.drain();
+    expect(result.completed, 1);
+    expect(result.conflicts, 1);
     expect(queue.transitions, [SyncStatus.conflict]);
     expect((await queue.pending()).length, 1);
   });
@@ -182,8 +183,9 @@ void main() {
       poster: (r) async => throw const NetworkFailure('down'),
     );
 
-    final n = await worker.drain();
-    expect(n, 0);
+    final result = await worker.drain();
+    expect(result.completed, 0);
+    expect(result.retries, 1);
     expect(queue.transitions, isEmpty);
     final pending = await queue.pending();
     expect(pending.length, 1);

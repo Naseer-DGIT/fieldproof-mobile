@@ -8,9 +8,13 @@ import '../../data/sync_worker.dart';
 import 'attendance_event.dart';
 import 'attendance_state.dart';
 
+/// Callable that drains the queue and reports the outcome.
+/// Defaults to `SyncWorker().drain`; tests pass a fake.
+typedef DrainCaller = Future<DrainResult> Function();
+
 class AttendanceBloc extends Bloc<AttendanceBlocEvent, AttendanceState> {
   final AttendanceRepository _repository;
-  final SyncWorker _sync;
+  final DrainCaller _drain;
 
   static const _initialBackoff = Duration(seconds: 30);
   static const _maxBackoff = Duration(minutes: 10);
@@ -18,8 +22,8 @@ class AttendanceBloc extends Bloc<AttendanceBlocEvent, AttendanceState> {
   Timer? _retryTimer;
   Duration _backoff = _initialBackoff;
 
-  AttendanceBloc(this._repository, {SyncWorker? sync})
-      : _sync = sync ?? SyncWorker(),
+  AttendanceBloc(this._repository, {DrainCaller? drain})
+      : _drain = drain ?? SyncWorker().drain,
         super(const AttendanceUnknown()) {
     on<AttendanceStatusRequested>(_onStatus);
     on<AttendanceRecordRequested>(_onRecord);
@@ -53,7 +57,7 @@ class AttendanceBloc extends Bloc<AttendanceBlocEvent, AttendanceState> {
         pendingCount: count,
         lastRecorded: event.type,
       ));
-      // A new event is pending: try immediately, then on backoff.
+      // New event pending: attempt sync now, and reschedule on failure.
       add(const AttendanceSyncRequested());
     } catch (e) {
       if (previous is AttendanceReady) {
@@ -74,9 +78,10 @@ class AttendanceBloc extends Bloc<AttendanceBlocEvent, AttendanceState> {
     _retryTimer?.cancel();
 
     emit(current.copyWith(syncing: true));
+
     DrainResult result;
     try {
-      result = await _sync.drain();
+      result = await _drain();
     } catch (_) {
       result = const DrainResult(retries: 1);
     }

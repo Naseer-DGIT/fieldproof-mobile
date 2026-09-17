@@ -1,8 +1,11 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:fieldproof_mobile/core/config/env.dart';
+import 'package:fieldproof_mobile/core/logging/secure_logger.dart';
 import 'package:fieldproof_mobile/features/attendance/data/attendance_queue.dart';
 import 'package:fieldproof_mobile/features/attendance/data/attendance_repository.dart';
+import 'package:fieldproof_mobile/features/attendance/data/drain_result.dart';
 import 'package:fieldproof_mobile/features/attendance/domain/attendance_event.dart';
 import 'package:fieldproof_mobile/features/attendance/presentation/bloc/attendance_bloc.dart';
 import 'package:fieldproof_mobile/features/attendance/presentation/bloc/attendance_event.dart';
@@ -54,11 +57,25 @@ class _FakeAttendanceRepository implements AttendanceRepository {
   Future<AttendanceStatus> currentStatus() async => status;
 }
 
+/// A drain that always succeeds without touching the queue.
+Future<DrainResult> _noopDrain() async => const DrainResult();
+
 void main() {
+  setUpAll(() {
+    Env.current = Environment.dev;
+    Env.apiBaseUrl = 'http://localhost:9999/api/v1';
+    Env.logLevel = 'error';
+    Env.certificatePinning = false;
+    SecureLogger.init();
+  });
+
   group('AttendanceBloc', () {
     blocTest<AttendanceBloc, AttendanceState>(
       'status request on empty queue → checkedOut, 0 pending',
-      build: () => AttendanceBloc(_FakeAttendanceRepository()),
+      build: () => AttendanceBloc(
+        _FakeAttendanceRepository(),
+        drain: _noopDrain,
+      ),
       act: (bloc) => bloc.add(const AttendanceStatusRequested()),
       expect: () => [
         const AttendanceReady(
@@ -69,12 +86,26 @@ void main() {
     );
 
     blocTest<AttendanceBloc, AttendanceState>(
-      'record check-in → Recording then Ready(checkedIn)',
-      build: () => AttendanceBloc(_FakeAttendanceRepository()),
+      'record check-in → Recording then Ready, then auto-sync states',
+      build: () => AttendanceBloc(
+        _FakeAttendanceRepository(),
+        drain: _noopDrain,
+      ),
       act: (bloc) => bloc
           .add(const AttendanceRecordRequested(AttendanceEventType.checkIn)),
       expect: () => [
         const AttendanceRecording(),
+        const AttendanceReady(
+          status: AttendanceStatus.checkedIn,
+          pendingCount: 1,
+          lastRecorded: AttendanceEventType.checkIn,
+        ),
+        const AttendanceReady(
+          status: AttendanceStatus.checkedIn,
+          pendingCount: 1,
+          lastRecorded: AttendanceEventType.checkIn,
+          syncing: true,
+        ),
         const AttendanceReady(
           status: AttendanceStatus.checkedIn,
           pendingCount: 1,
@@ -85,11 +116,14 @@ void main() {
 
     blocTest<AttendanceBloc, AttendanceState>(
       'record failure restores previous ready state if any',
-      build: () => AttendanceBloc(_FakeAttendanceRepository(
-        status: AttendanceStatus.checkedIn,
-        pendingCountValue: 3,
-        throwOnRecord: true,
-      )),
+      build: () => AttendanceBloc(
+        _FakeAttendanceRepository(
+          status: AttendanceStatus.checkedIn,
+          pendingCountValue: 3,
+          throwOnRecord: true,
+        ),
+        drain: _noopDrain,
+      ),
       seed: () => const AttendanceReady(
         status: AttendanceStatus.checkedIn,
         pendingCount: 3,
