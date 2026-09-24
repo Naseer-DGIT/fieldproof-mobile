@@ -60,3 +60,4 @@ ios/.symlinks/
 /android/build/
 /ios/Pods/
 ios/.symlinks/
+devtools_options.yaml
