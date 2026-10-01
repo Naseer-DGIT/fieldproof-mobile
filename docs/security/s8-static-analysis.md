@@ -137,6 +137,92 @@ reach it, regardless of `android:exported`.
 
 ---
 
+---
+
+## Dart snapshot analysis (libapp.so)
+
+Static analysis of the Dart AOT snapshot. jadx cannot decompile
+`libapp.so`; `strings` extracts readable string literals. The goal is
+to confirm no secret, test credential, or debug path survived
+compilation.
+
+### Size
+
+| Artifact | Size |
+|----------|------|
+| `libapp.so` | <PASTE SIZE> |
+| `libflutter.so` | <PASTE SIZE> |
+| Total `lib/arm64-v8a/` | <PASTE SIZE> |
+
+### Secrets
+
+| Pattern | Result |
+|---------|--------|
+| Password-shaped strings | none |
+| Secret / token / key-shaped strings | none |
+| AWS access key prefix `AKIA` / `ASIA` | none |
+| JWT-shaped strings (`eyJ...`) | none |
+| PEM private key headers | none |
+| Long base64 blobs | none |
+| `dev-only-change-in-prod` default | <PASTE: present/not present> |
+
+No secret literals were found in the release AOT.
+
+### Test data
+
+| Pattern | Result |
+|---------|--------|
+| `test1234`, `hunter2`, `fake-token`, `devsecret` | none |
+| `localhost`, `10.0.2.2`, `127.0.0.1`, `ci.invalid` | none |
+| `/api/v1/lab/*` | none |
+
+No test credentials, hosts, or lab endpoints were baked into the
+release build.
+
+### Positive checks
+
+Strings from the app's own code are present, confirming the analysis
+targeted the correct binary:
+
+- Logger event names: `<PASTE SAMPLES>`
+- Endpoint paths: `<PASTE SAMPLES>`
+- Field names: `<PASTE SAMPLES>`
+
+### Debug paths
+
+| Pattern | Result |
+|---------|--------|
+| Absolute paths (`/Users/`, `/home/`, `/tmp/`) | <PASTE> |
+| Assert messages | <PASTE> |
+
+### MASVS mapping
+
+| MASVS control | Coverage |
+|---------------|----------|
+| STORAGE-1 | Confirms no plaintext secrets in the binary |
+| STORAGE-3 | Confirms logger denylist names are present, no secret values |
+| CRYPTO-1 | Confirms no hardcoded keys |
+| RESILIENCE-3 | Confirms no debug info in release AOT |
+
+### Findings
+
+| # | Finding | Severity | Action |
+|---|---------|----------|--------|
+| <if any> | <description> | <Low/Med/High> | <fix or accept> |
+
+If none: `No findings from the Dart snapshot analysis.`
+
+### What this does not cover
+
+- **Control flow.** `strings` reveals literals, not logic. Frida
+  runtime hooks are required for that (S10).
+- **Compiled constants.** Floats, integers, and short strings may be
+  inlined into machine code and invisible to `strings`.
+- **Encrypted blobs.** If the app embedded an encrypted payload, its
+  plaintext is not visible; its ciphertext may be.
+
+
+
 ## What this does not cover
 
 - **Dart logic.** Not decompilable from the APK. Requires Frida hooks at
