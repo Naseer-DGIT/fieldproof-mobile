@@ -16,9 +16,9 @@ sprint that closes it.
 
 | Req | Description | Status | Evidence / Sprint |
 |-----|-------------|--------|-------------------|
-| STORAGE-1 | No sensitive data stored in plaintext | **Met** | `AppDatabase` uses SQLCipher. `KeyStore` stores keys in Keychain/Keystore. S1 Day 4. |
+| STORAGE-1 | No sensitive data stored in plaintext | **Met** | `AppDatabase` uses SQLCipher. `KeyStore` stores keys in Keychain/Keystore. S1 Day 4. Confirmed by `s8-static-analysis.md` Day 3 (no plaintext secrets in `libapp.so`). |
 | STORAGE-2 | Sensitive data excluded from platform backups | **Met** | `android:allowBackup="false"`. iOS: default iCloud backup excludes Keychain items with `first_unlock_this_device`. |
-| STORAGE-3 | No sensitive data in logs | **Met** | `SecureLogger` denylist + prod silence. S1 Day 3. |
+| STORAGE-3 | No sensitive data in logs | **Met** | `SecureLogger` denylist + prod silence. S1 Day 3. Confirmed by `s8-static-analysis.md` Day 3 (logger event names present, no secret values). |
 | STORAGE-4 | No sensitive data in the keyboard cache | **Met** | No sensitive inputs. Login uses `obscureText`. |
 | STORAGE-5 | No sensitive data in screenshots / recents | **Partial** | Android `FLAG_SECURE` not set. iOS no blur. Not yet needed — no restricted data rendered. Tracked in S11. |
 | STORAGE-6 | No sensitive data leakage via IPC | **Met** | Flutter uses a private channel to native code. No exported activities. |
@@ -30,7 +30,7 @@ sprint that closes it.
 
 | Req | Description | Status | Evidence / Sprint |
 |-----|-------------|--------|-------------------|
-| CRYPTO-1 | No hardcoded cryptographic keys | **Met** | All keys generated at runtime. Verified by `scripts/check_classification.sh`. |
+| CRYPTO-1 | No hardcoded cryptographic keys | **Met** | All keys generated at runtime. Verified by `scripts/check_classification.sh` and by `s8-static-analysis.md` Day 3. |
 | CRYPTO-2 | Strong, platform-provided crypto primitives | **Met** | `cryptography` package (Ed25519), SQLCipher 4.10, Keychain/Keystore. |
 | CRYPTO-3 | No custom crypto | **Met** | No custom implementations. The only crypto code is signing and key wrapping. |
 | CRYPTO-4 | Secure random | **Met** | `Random.secure()`. |
@@ -86,10 +86,10 @@ sprint that closes it.
 
 | Req | Description | Status | Evidence / Sprint |
 |-----|-------------|--------|-------------------|
-| RESILIENCE-1 | Root / jailbreak detection | **Deferred** | S11. Detection is a risk signal, not a block. See `s8-root-detection.md`. |
+| RESILIENCE-1 | Root / jailbreak detection | **Deferred** | S11. Detection is a risk signal, not a block. Design: `s8-root-detection.md`. |
 | RESILIENCE-2 | Anti-debugging | **Deferred** | S11. |
-| RESILIENCE-3 | Anti-tampering | **Partial** | Server-side per-event signature verification (S2). R8 in release builds. Attestation deferred to S11. |
-| RESILIENCE-4 | Anti-repackaging | **Partial** | Attestation in S11. |
+| RESILIENCE-3 | Anti-tampering | **Partial** | Server-side per-event signature verification (S2). Release APK signed with a dedicated keystore (S8 Day 6, see `s8-release-signing.md`). Attestation wiring is S11. |
+| RESILIENCE-4 | Anti-repackaging | **Partial** | Signed release APK with a 4096-bit RSA keystore raises the repackaging bar. Full anti-repackaging requires Play Integrity / App Attest. See `s8-attestation.md`; wiring is S11. |
 | RESILIENCE-5 | Anti-hooking (Frida) | **Deferred** | S10 (runtime testing). |
 
 ---
