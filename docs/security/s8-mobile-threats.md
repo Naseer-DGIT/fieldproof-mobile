@@ -15,7 +15,7 @@ that verifies it.
 
 | ID | Asset | STRIDE | Threat | Control | Verification | Status |
 |----|-------|--------|--------|---------|--------------|--------|
-| M-001 | App binary | Tampering | App repackaged with a modified sign function | Play Integrity / App Attest at registration and on high-value events | S11 | Deferred |
+| M-001 | App binary | Tampering | App repackaged with a modified sign function | Play Integrity / App Attest at registration and on high-value events | S11 — see `s8-attestation.md` | Partial |
 | M-002 | Local DB | Info disclosure | DB file extracted from a rooted device | SQLCipher AES-256 | S1 attack lab (`sqlite3` → "file is not a database") | Met |
 | M-003 | Signing key | Spoofing | Frida hooks `DeviceKey.sign` | Server-side signature verification against registered public key | S2 Day 5 end-to-end test | Met (client hook still possible; server rejects) |
 | M-004 | Local data | Info disclosure | Android backup extracts Keychain / EncryptedSharedPreferences | `allowBackup="false"` | S1 attack lab (adb backup produced no `databases/`) | Met |
@@ -23,7 +23,7 @@ that verifies it.
 | M-006 | Session token | Info disclosure | Token read from device logs | `SecureLogger` denylist + prod silence | `scripts/check_classification.sh` | Met |
 | M-007 | Biometric | Info disclosure | Biometric embedding extracted from device storage | Embedding is encrypted on-device before sync; server stores ciphertext | ADR-0002 | Partial — capture not yet implemented |
 | M-008 | Local DB | Tampering | Attacker edits the SQLCipher DB on a rooted device | Per-event Ed25519 signature + server verification | S2 Day 5 test 4 (signature tampering → 400) | Met |
-| M-009 | Device binding | Spoofing | Attacker registers their device as the victim | Device registration requires an authenticated token; attestation adds signal | S2 Day 3 + S11 | Partial |
+| M-009 | Device binding | Spoofing | Attacker registers their device as the victim | Device registration requires an authenticated token; attestation adds signal | S2 Day 3 + S11 — see `s8-attestation.md` | Partial |
 | M-010 | Rekey operation | Denial of service | Attacker interrupts `PRAGMA rekey` at a specific point | Three-alias crash-safe rekey with fallback open | S5 Day 6 rekey tests (3 scenarios) | Met |
 | M-011 | Rooted device | Info disclosure | Frida reads decrypted rows from a running app | Not preventable. Server-side controls are the answer | S10 runtime report | Open — accepted limitation |
 | M-012 | Mock location | Spoofing | Attacker sets a fake GPS position | Mock-location detection is a risk signal, not a block | Documented in `Product_Project_Document.md` §9 | Partial |
@@ -41,10 +41,14 @@ that verifies it.
 | Status | Count |
 |--------|-------|
 | Met | 9 |
-| Partial | 4 |
-| Deferred | 4 |
+| Partial | 6 |
+| Deferred | 2 |
 | Open (accepted) | 1 |
 | N/A | 2 |
+
+The change from the previous count: M-001 and M-009 move from
+Deferred to Partial after the attestation evaluation on Day 4. See
+`s8-attestation.md`.
 
 ### Accepted limitations
 
