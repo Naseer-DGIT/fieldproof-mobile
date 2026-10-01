@@ -94,7 +94,7 @@ score is not a measure of the app's security posture.
 
 | # | Finding | Real? | Action |
 |---|---------|-------|--------|
-| 1 | Signed with debug certificate | **Real** | Configure release keystore in S11. Debug signing is expected in S1–S8. |
+| 1 | Signed with debug certificate | **Real** | Fixed on S8 Day 6. Release keystore configured and wired into Gradle. |
 | 2 | `minSdk=24` allows Android 7.0 | **Real** | Raise to 26 (Android 8.0) in S11 with the release config. |
 | 3 | `ProfileInstallReceiver` exported | **No** | Protected by `android.permission.DUMP` (`signature|privileged`). Not reachable by normal apps. |
 | 4 | Insecure Random Number Generator | **No** | Matches in AndroidX / plugin `.java` files, not in `libapp.so`. Dart uses `Random.secure()` only. |
@@ -239,7 +239,7 @@ If none: `No findings from the Dart snapshot analysis.`
 
 | # | Action | Sprint |
 |---|--------|--------|
-| 1 | Configure a release keystore via `android/key.properties` | S11 |
+| 1 | ~~Configure a release keystore via `android/key.properties`~~ Done in S8 Day 6 | S8 |
 | 2 | Raise `minSdk` to 26 | S11 |
 | 3 | Certificate pinning | S11 |
 | 4 | Root / jailbreak detection | S11 |
