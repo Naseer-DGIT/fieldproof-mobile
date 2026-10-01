@@ -25,7 +25,7 @@ that verifies it.
 | M-008 | Local DB | Tampering | Attacker edits the SQLCipher DB on a rooted device | Per-event Ed25519 signature + server verification | S2 Day 5 test 4 (signature tampering → 400) | Met |
 | M-009 | Device binding | Spoofing | Attacker registers their device as the victim | Device registration requires an authenticated token; attestation adds signal | S2 Day 3 + S11 — see `s8-attestation.md` | Partial |
 | M-010 | Rekey operation | Denial of service | Attacker interrupts `PRAGMA rekey` at a specific point | Three-alias crash-safe rekey with fallback open | S5 Day 6 rekey tests (3 scenarios) | Met |
-| M-011 | Rooted device | Info disclosure | Frida reads decrypted rows from a running app | Not preventable. Server-side controls are the answer | S10 runtime report | Open — accepted limitation |
+| M-011 | Rooted device | Info disclosure | Frida reads decrypted rows from a running app | Not preventable. Root detection is a risk signal, not a block. Server-side signature verification is the defense | S10 runtime report; `s8-root-detection.md` | Open — accepted limitation |
 | M-012 | Mock location | Spoofing | Attacker sets a fake GPS position | Mock-location detection is a risk signal, not a block | Documented in `Product_Project_Document.md` §9 | Partial |
 | M-013 | Device clock | Tampering | Attacker rolls the device clock back | Server timestamps on receive; monotonic elapsed time | S2 Day 5 chain check | Met |
 | M-014 | TLS | Info disclosure | Attacker intercepts traffic with a rogue CA | Certificate pinning | S11 | Deferred |

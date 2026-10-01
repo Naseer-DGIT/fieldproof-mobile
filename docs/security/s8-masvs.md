@@ -86,7 +86,7 @@ sprint that closes it.
 
 | Req | Description | Status | Evidence / Sprint |
 |-----|-------------|--------|-------------------|
-| RESILIENCE-1 | Root / jailbreak detection | **Deferred** | S11. Detection is a risk signal, not a block. |
+| RESILIENCE-1 | Root / jailbreak detection | **Deferred** | S11. Detection is a risk signal, not a block. See `s8-root-detection.md`. |
 | RESILIENCE-2 | Anti-debugging | **Deferred** | S11. |
 | RESILIENCE-3 | Anti-tampering | **Partial** | Server-side per-event signature verification (S2). R8 in release builds. Attestation deferred to S11. |
 | RESILIENCE-4 | Anti-repackaging | **Partial** | Attestation in S11. |
