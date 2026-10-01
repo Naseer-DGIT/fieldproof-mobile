@@ -48,6 +48,11 @@ jobs:
       - name: Test
         run: flutter test --reporter expanded
 
+      - name: Clear Gradle caches
+        run: |
+          rm -rf ~/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin
+          echo "kotlin caches cleared"
+
       - name: Build release APK (staging flavor)
         run: flutter build apk --release --dart-define=FLAVOR=staging
 
